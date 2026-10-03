@@ -417,7 +417,7 @@ func (m *Manager) SetSelector(selector Selector) {
 		return
 	}
 	if selector == nil {
-		selector = &RoundRobinSelector{}
+		selector = &FillFirstSelector{}
 	}
 	m.selectorMu.Lock()
 	defer m.selectorMu.Unlock()

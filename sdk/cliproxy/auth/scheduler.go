@@ -170,7 +170,9 @@ func selectorStrategy(selector Selector) schedulerStrategy {
 		return schedulerStrategyFillFirst
 	case *WeightedRoundRobinSelector:
 		return schedulerStrategyWeightedRoundRobin
-	case nil, *RoundRobinSelector:
+	case nil:
+		return schedulerStrategyFillFirst
+	case *RoundRobinSelector:
 		return schedulerStrategyRoundRobin
 	default:
 		return schedulerStrategyCustom

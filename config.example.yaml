@@ -126,7 +126,7 @@ access:
 
 # Routing strategy for selecting credentials when multiple match.
 routing:
-  strategy: "round-robin" # round-robin (default), weighted-round-robin, fill-first
+  strategy: "fill-first" # fill-first (default), round-robin, weighted-round-robin
   # weighted-round-robin uses each credential's integer weight (default 1, maximum 1,000,000).
   # Non-positive weights exclude the credential while this strategy is active.
   # For OAuth/file credentials, add a top-level numeric "weight" field to the auth JSON.
@@ -783,6 +783,10 @@ upstream:
 #           weight: 5 # optional: weighted-round-robin share; omitted defaults to 1; maximum 1,000,000
 #
 #   # OpenAI compatibility providers
+#   # Use any provider name; include a service path prefix in base-url when needed:
+#   #   name: "my-custom-gateway"
+#   #   base-url: "https://gateway.example.com/custom/v1"
+#   #   api-key-entries: [{api-key: "your-api-key"}]
 #
 #   openai-compatibility:
 #     - name: "openrouter" # The name of the provider; it will be used in the user agent and other places.

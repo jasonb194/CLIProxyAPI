@@ -39,6 +39,15 @@ func TestFillFirstSelectorPick_Deterministic(t *testing.T) {
 	}
 }
 
+func TestSessionAffinitySelectorDefaultsToFillFirstFallback(t *testing.T) {
+	t.Parallel()
+
+	selector := NewSessionAffinitySelector(nil)
+	if _, ok := selector.fallback.(*FillFirstSelector); !ok {
+		t.Fatalf("session affinity fallback = %T, want *FillFirstSelector", selector.fallback)
+	}
+}
+
 func TestRoundRobinSelectorPick_CyclesDeterministic(t *testing.T) {
 	t.Parallel()
 

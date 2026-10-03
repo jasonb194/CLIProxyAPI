@@ -4179,7 +4179,7 @@ func TestManager_Load_MonotonicEpochAssignment_AndRemovalTombstones(t *testing.T
 		Generation:        20,
 	})
 
-	manager := NewManager(store, nil, nil)
+	manager := NewManager(store, &RoundRobinSelector{}, nil)
 	executor := &noForkAliasTestExecutor{id: provider}
 	manager.RegisterExecutor(executor)
 

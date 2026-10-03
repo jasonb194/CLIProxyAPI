@@ -74,3 +74,31 @@ openai-compatibility:
 		t.Fatal("openai-compatibility omitted IsCompat = true, want default false")
 	}
 }
+
+func TestOpenAICompatibilityConfigDecodesCustomPathAndAPIKey(t *testing.T) {
+	cfg, errParse := ParseConfigBytes([]byte(`openai-compatibility:
+  - name: "my-custom-gateway"
+    base-url: "https://gateway.example.com/custom/v1"
+    api-key-entries:
+      - api-key: "test-api-key"
+    models:
+      - name: "upstream-model"
+        alias: "my-model"
+`))
+	if errParse != nil {
+		t.Fatalf("ParseConfigBytes() error = %v", errParse)
+	}
+	if len(cfg.OpenAICompatibility) != 1 {
+		t.Fatalf("OpenAICompatibility entries = %d, want 1", len(cfg.OpenAICompatibility))
+	}
+	provider := cfg.OpenAICompatibility[0]
+	if provider.Name != "my-custom-gateway" {
+		t.Fatalf("provider name = %q, want my-custom-gateway", provider.Name)
+	}
+	if provider.BaseURL != "https://gateway.example.com/custom/v1" {
+		t.Fatalf("provider base-url = %q, want https://gateway.example.com/custom/v1", provider.BaseURL)
+	}
+	if len(provider.APIKeyEntries) != 1 || provider.APIKeyEntries[0].APIKey != "test-api-key" {
+		t.Fatalf("provider API key entries = %+v, want one test API key", provider.APIKeyEntries)
+	}
+}

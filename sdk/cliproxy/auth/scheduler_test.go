@@ -807,6 +807,94 @@ func TestManagerRoundRobinPreservesSuccessorAcrossCooldown(t *testing.T) {
 	}
 }
 
+func TestManagerDefaultFillFirstUsesAuthUntilCooldown(t *testing.T) {
+	t.Parallel()
+
+	manager := NewManager(nil, nil, nil)
+	model := "test-default-fill-first-model"
+	authIDs := []string{"default-fill-first-a", "default-fill-first-b"}
+	registerSchedulerModels(t, "gemini", model, authIDs...)
+	for _, id := range authIDs {
+		if _, errRegister := manager.Register(context.Background(), &Auth{ID: id, Provider: "gemini"}); errRegister != nil {
+			t.Fatalf("Register(%s) error = %v", id, errRegister)
+		}
+	}
+
+	for index := 0; index < 3; index++ {
+		got, errPick := manager.scheduler.pickSingle(context.Background(), "gemini", model, cliproxyexecutor.Options{}, nil)
+		if errPick != nil {
+			t.Fatalf("pickSingle #%d error = %v", index, errPick)
+		}
+		if got == nil || got.ID != authIDs[0] {
+			t.Fatalf("pickSingle #%d = %v, want %s", index, got, authIDs[0])
+		}
+	}
+
+	manager.MarkResult(context.Background(), Result{
+		AuthID:   authIDs[0],
+		Provider: "gemini",
+		Model:    model,
+		Success:  false,
+		Error:    &Error{HTTPStatus: 429, Message: "quota"},
+	})
+
+	got, errPick := manager.scheduler.pickSingle(context.Background(), "gemini", model, cliproxyexecutor.Options{}, nil)
+	if errPick != nil {
+		t.Fatalf("pickSingle after quota cooldown error = %v", errPick)
+	}
+	if got == nil || got.ID != authIDs[1] {
+		t.Fatalf("pickSingle after quota cooldown = %v, want %s", got, authIDs[1])
+	}
+}
+
+func TestManagerDefaultFillFirstExhaustsProviderBeforeNextProvider(t *testing.T) {
+	t.Parallel()
+
+	manager := NewManager(nil, nil, nil)
+	model := "test-default-fill-first-mixed-model"
+	registerSchedulerModels(t, "gemini", model, "fill-first-gemini-a", "fill-first-gemini-b")
+	registerSchedulerModels(t, "claude", model, "fill-first-claude-a")
+	for _, auth := range []*Auth{
+		{ID: "fill-first-gemini-a", Provider: "gemini"},
+		{ID: "fill-first-gemini-b", Provider: "gemini"},
+		{ID: "fill-first-claude-a", Provider: "claude"},
+	} {
+		if _, errRegister := manager.Register(context.Background(), auth); errRegister != nil {
+			t.Fatalf("Register(%s) error = %v", auth.ID, errRegister)
+		}
+	}
+
+	pick := func(wantProvider, wantAuthID string) {
+		t.Helper()
+		got, provider, errPick := manager.scheduler.pickMixed(context.Background(), []string{"gemini", "claude"}, model, cliproxyexecutor.Options{}, nil)
+		if errPick != nil {
+			t.Fatalf("pickMixed() error = %v", errPick)
+		}
+		if got == nil || provider != wantProvider || got.ID != wantAuthID {
+			t.Fatalf("pickMixed() = (%v, %q), want (%s, %q)", got, provider, wantProvider, wantAuthID)
+		}
+	}
+	cool := func(provider, authID string) {
+		t.Helper()
+		manager.MarkResult(context.Background(), Result{
+			AuthID:   authID,
+			Provider: provider,
+			Model:    model,
+			Success:  false,
+			Error:    &Error{HTTPStatus: 429, Message: "quota"},
+		})
+	}
+
+	// Repeated requests stick to the first provider and its first ready credential.
+	pick("gemini", "fill-first-gemini-a")
+	pick("gemini", "fill-first-gemini-a")
+	cool("gemini", "fill-first-gemini-a")
+	pick("gemini", "fill-first-gemini-b")
+	pick("gemini", "fill-first-gemini-b")
+	cool("gemini", "fill-first-gemini-b")
+	pick("claude", "fill-first-claude-a")
+}
+
 func TestSchedulerPick_RoundRobinPreservesWebsocketSuccessorAcrossCooldown(t *testing.T) {
 	t.Parallel()
 
@@ -2107,6 +2195,14 @@ func TestManager_InitializesSchedulerForBuiltInSelector(t *testing.T) {
 	manager.SetSelector(&FillFirstSelector{})
 	if manager.scheduler.strategy != schedulerStrategyFillFirst {
 		t.Fatalf("manager.scheduler.strategy = %v, want %v", manager.scheduler.strategy, schedulerStrategyFillFirst)
+	}
+
+	manager.SetSelector(nil)
+	if _, ok := manager.Selector().(*FillFirstSelector); !ok {
+		t.Fatalf("manager.Selector() = %T, want *FillFirstSelector after nil reset", manager.Selector())
+	}
+	if manager.scheduler.strategy != schedulerStrategyFillFirst {
+		t.Fatalf("manager.scheduler.strategy = %v after nil reset, want %v", manager.scheduler.strategy, schedulerStrategyFillFirst)
 	}
 }
 

@@ -934,7 +934,7 @@ func NewSessionAffinitySelector(fallback Selector) *SessionAffinitySelector {
 // NewSessionAffinitySelectorWithConfig creates a selector with custom configuration.
 func NewSessionAffinitySelectorWithConfig(cfg SessionAffinityConfig) *SessionAffinitySelector {
 	if cfg.Fallback == nil {
-		cfg.Fallback = &RoundRobinSelector{}
+		cfg.Fallback = &FillFirstSelector{}
 	}
 	if cfg.TTL <= 0 {
 		cfg.TTL = time.Hour

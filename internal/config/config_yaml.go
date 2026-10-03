@@ -411,7 +411,7 @@ func isKnownDefaultValue(path []string, node *yaml.Node) bool {
 		case "plugins.dir":
 			return node.Value == "plugins"
 		case "routing.strategy":
-			return node.Value == "round-robin"
+			return node.Value == "fill-first"
 		}
 	}
 

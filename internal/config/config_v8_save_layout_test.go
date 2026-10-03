@@ -39,6 +39,18 @@ func TestIsV8ConfigLayout(t *testing.T) {
 	}
 }
 
+func TestRoutingStrategyFillFirstIsTheConfigDefault(t *testing.T) {
+	fillFirst := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "fill-first"}
+	if !isKnownDefaultValue([]string{"routing", "strategy"}, fillFirst) {
+		t.Fatal("fill-first routing strategy should be pruned as the default")
+	}
+
+	roundRobin := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "round-robin"}
+	if isKnownDefaultValue([]string{"routing", "strategy"}, roundRobin) {
+		t.Fatal("round-robin routing strategy should remain explicit")
+	}
+}
+
 func TestV0SaveUpgradesHistoricalV8Layout(t *testing.T) {
 	for _, version := range []string{"", "config-version: 8\n"} {
 		t.Run(version, func(t *testing.T) {

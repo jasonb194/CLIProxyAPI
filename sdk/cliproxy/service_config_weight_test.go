@@ -21,6 +21,25 @@ func TestWeightedRoundRobinRoutingSelector(t *testing.T) {
 	}
 }
 
+func TestRoutingStrategyDefaultsToFillFirstAndPreservesRoundRobin(t *testing.T) {
+	if state := normalizedRoutingRuntimeState(nil); state.strategy != "fill-first" {
+		t.Fatalf("default strategy = %q, want fill-first", state.strategy)
+	}
+	if _, ok := newRoutingSelector(normalizedRoutingRuntimeState(nil)).(*coreauth.FillFirstSelector); !ok {
+		t.Fatalf("default selector = %T, want *auth.FillFirstSelector", newRoutingSelector(normalizedRoutingRuntimeState(nil)))
+	}
+
+	state := normalizedRoutingRuntimeState(&internalconfig.Config{
+		Routing: internalconfig.RoutingConfig{Strategy: "round-robin"},
+	})
+	if state.strategy != "round-robin" {
+		t.Fatalf("explicit strategy = %q, want round-robin", state.strategy)
+	}
+	if _, ok := newRoutingSelector(state).(*coreauth.RoundRobinSelector); !ok {
+		t.Fatalf("explicit selector = %T, want *auth.RoundRobinSelector", newRoutingSelector(state))
+	}
+}
+
 func TestServiceRejectsInvalidCredentialWeightConfigCommit(t *testing.T) {
 	originalCfg := &internalconfig.Config{}
 	service := &Service{cfg: originalCfg}

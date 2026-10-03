@@ -22,7 +22,7 @@ func (m *mockPluginScheduler) PickAuth(ctx context.Context, req pluginapi.Schedu
 func TestHostAffinityLookupCallback_Contract(t *testing.T) {
 	host := New()
 	manager := coreauth.NewManager(nil, nil, nil)
-	selector := coreauth.NewSessionAffinitySelector(nil)
+	selector := coreauth.NewSessionAffinitySelector(&coreauth.RoundRobinSelector{})
 	manager.SetSelector(selector)
 	host.SetAuthManager(manager)
 
